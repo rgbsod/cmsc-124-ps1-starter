@@ -153,7 +153,7 @@ dt_status dt_value_as_str(dt_value v, dt_str **out)
     *out = v.as.string;
     return DT_OK;
     
-    (void)v;
-    (void)out;
-    return DT_ERR_TAG;
+    // (void)v;
+    // (void)out;
+    // return DT_ERR_TAG;
 }
