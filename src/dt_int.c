@@ -29,14 +29,20 @@
  */
 dt_status dt_int_add(long long a, long long b, long long *out)
 {
-    /* TODO: Check for overflow. Then write the sum to *out.
-       dt_int_add(2, 3, &out)          -> DT_OK, out = 5
-       dt_int_add(LLONG_MAX, 1, &out)  -> DT_ERR_OVERFLOW, out untouched
-       cases/normal/int_arithmetic.case, cases/boundary/int_overflow_add.case */
-    (void)a;
-    (void)b;
-    (void)out;
-    return DT_ERR_OVERFLOW;
+    // Overflow check depending on b:
+    if (b >= 0){
+        if (a > LLONG_MAX - b){
+            return  DT_ERR_OVERFLOW;
+        }
+    } else {
+        if (a < LLONG_MIN - b){
+            return  DT_ERR_OVERFLOW;
+        }
+    }
+
+    *out = a + b;
+    return DT_OK;
+
 }
 
 /*
@@ -51,10 +57,17 @@ dt_status dt_int_sub(long long a, long long b, long long *out)
        dt_int_sub(10, 4, &out)                 -> DT_OK, out = 6
        dt_int_sub(LLONG_MIN + 1, 2, &out)      -> DT_ERR_OVERFLOW, out untouched
        cases/normal/int_arithmetic.case, cases/boundary/int_overflow_sub_min.case */
-    (void)a;
-    (void)b;
-    (void)out;
-    return DT_ERR_OVERFLOW;
+    if (b < 0){
+        if (a > LLONG_MAX + b){
+            return  DT_ERR_OVERFLOW;
+        }
+    } else {
+        if (a < LLONG_MIN + b){
+            return  DT_ERR_OVERFLOW;
+        }
+    }
+    *out = a - b;
+    return DT_OK;
 }
 
 /*
@@ -70,6 +83,56 @@ dt_status dt_int_mul(long long a, long long b, long long *out)
        dt_int_mul(LLONG_MIN, -1, &out)   -> DT_ERR_OVERFLOW, out untouched
        cases/normal/int_arithmetic.case,
        cases/boundary/int_mul_min_by_negative_one.case */
+
+       //handle 0
+    if ((a == 0 || b == 0)   ) {
+    *out = 0;
+    return DT_OK;
+    }
+
+    //handle -1 with LLONG_MIN
+
+    if (b == -1){
+    if (a == LLONG_MIN){
+        return DT_ERR_OVERFLOW;
+    }
+    }
+
+    if (a == -1){
+    if (b == LLONG_MIN){    
+        return DT_ERR_OVERFLOW;
+    }
+    }
+
+    //handle overflow checks:
+    if (a > 0 && b > 0){
+        if (a > LLONG_MAX / b){
+                return DT_ERR_OVERFLOW;
+            }
+    }
+
+    if (a > 0 && b < 0){
+        if (a > LLONG_MIN / b){
+            return DT_ERR_OVERFLOW;
+        }
+    }
+
+    if (a < 0 && b > 0){
+        if (a < LLONG_MIN / b){
+            return DT_ERR_OVERFLOW;
+        }
+    }
+
+    if (a < 0 && b < 0){
+        if (a < LLONG_MAX / b){
+            return DT_ERR_OVERFLOW;
+        }
+    }
+
+
+    *out = a * b;
+    return DT_OK;
+
     (void)a;
     (void)b;
     (void)out;
