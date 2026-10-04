@@ -37,9 +37,35 @@ dt_str *dt_str_new(const char *bytes, size_t length)
        dt_str_new("hello", 5)  -> a string whose dt_str_len is 5
        dt_str_new("a\0b", 3)   -> a string whose dt_str_len remains 3
        cases/normal/string_building.case, cases/capacity/embedded_zero_byte.case */
-    (void)bytes;
-    (void)length;
-    return NULL;
+
+    // rejects when length is the same as the SIZE_MAX
+    if (length == SIZE_MAX) {
+        return NULL;
+    }
+
+    // allocate handle
+    dt_str *s = malloc(sizeof(dt_str));
+    if (s == NULL) {
+        return NULL;
+    }
+
+    // allocate the buffer
+    s->bytes = malloc(length+1); 
+    if (s->bytes == NULL) {
+        free(s);
+        return NULL;
+    }
+
+    // skip copy for empty strings
+    if (length > 0) {
+        memcpy(s->bytes, bytes, length);
+    }
+
+    s->bytes[length] = '\0'; // terminator at the end
+    s->length = length;
+    s->capacity = length + 1;    
+
+    return s;
 }
 
 /*
@@ -50,7 +76,14 @@ void dt_str_free(dt_str *s)
     /* TODO: Release the buffer. Then release the handle. Accept NULL.
        dt_str_free(s)     -> the buffer and the handle are both released
        dt_str_free(NULL)  -> returns, having done nothing */
-    (void)s;
+    
+    if (s == NULL) {
+        return;
+    }
+    
+    free(s->bytes); // release the buffer
+    free(s); // release the handle
+    
 }
 
 /*
@@ -62,8 +95,9 @@ size_t dt_str_len(const dt_str *s)
        after `str new greeting "hello"` then `str append greeting ", world"`:
          dt_str_len(greeting) -> 12
        cases/normal/string_building.case */
-    (void)s;
-    return 0;
+    
+    return s->length;
+
 }
 
 /*
@@ -77,8 +111,9 @@ const char *dt_str_bytes(const dt_str *s)
          dt_str_bytes(s) -> the three bytes 'a', 0, 'b'
          dt_str_len(s)   -> 3, the required read length
        cases/capacity/embedded_zero_byte.case */
-    (void)s;
-    return "";
+    
+    return s->bytes;
+
 }
 
 /*
@@ -95,10 +130,53 @@ dt_status dt_str_append(dt_str *s, const char *bytes, size_t length)
        s holds "hello": dt_str_append(s, ", world", 7) -> DT_OK, len is now 12
        an allocation failure                           -> DT_ERR_CAPACITY, s unchanged
        cases/normal/string_building.case, cases/capacity/string_growth.case */
-    (void)s;
-    (void)bytes;
-    (void)length;
-    return DT_ERR_CAPACITY;
+
+    
+    /*
+    * checking the length of the additional string
+    * if it can still fit in the SIZE_MAX
+    */ 
+
+    if (length > SIZE_MAX - 1 - s->length) {
+        return DT_ERR_CAPACITY;
+    }
+
+    // initial length + added length + terminator
+    size_t req_len = s->length + length + 1; 
+    
+    // check if the required length exceeds the capacity
+    if (req_len > s->capacity) {
+        size_t new_capacity = s->capacity;
+
+        // expanding capacity
+        while (new_capacity < req_len) {
+            if (new_capacity > SIZE_MAX / 2) {
+                new_capacity = req_len;
+                break;
+            }
+
+            new_capacity *= 2;
+        }
+
+        // reallocate
+        char *new_str = realloc(s->bytes, new_capacity);
+
+        if (new_str == NULL) {
+            return DT_ERR_CAPACITY;
+        }
+
+        s->bytes = new_str;
+        s->capacity = new_capacity;
+    }
+
+    if (length > 0) {
+        memcpy(s->bytes + s->length, bytes, length);
+    }
+    s->length += length;
+    s->bytes[s->length] ='\0';
+
+    return DT_OK;
+
 }
 
 /*
@@ -118,11 +196,29 @@ dt_status dt_str_substr(const dt_str *s, size_t start, size_t length, dt_str **o
          dt_str_substr(s, 3, 5, &out)  -> DT_ERR_RANGE, *out untouched
        an allocation failure           -> DT_ERR_CAPACITY, *out untouched
        cases/boundary/substr_exact_end.case, cases/boundary/substr_past_end.case */
-    (void)s;
-    (void)start;
-    (void)length;
-    (void)out;
-    return DT_ERR_RANGE;
+    
+    // start could be equal of the length
+    if (start > s->length) {
+        return DT_ERR_RANGE;
+    }
+
+    // compare length with remaining length
+    if (length > s->length - start) {
+        return DT_ERR_RANGE;
+    }
+
+    // create the substr
+    dt_str *substr = dt_str_new(s->bytes + start, length);
+    
+    // allocation fail or rejection of SIZE_MAX
+    if (substr == NULL) {
+        return DT_ERR_CAPACITY;
+    }
+
+    *out = substr;
+
+    return DT_OK;
+
 }
 
 /*
@@ -137,7 +233,13 @@ bool dt_str_eq(const dt_str *a, const dt_str *b)
        "hello" and "world"  -> false
        "a\0b" and "a"       -> false because their lengths are 3 and 1
        cases/normal/string_building.case, cases/capacity/embedded_zero_byte.case */
-    (void)a;
-    (void)b;
+    
+
+    // compare lengths
+    if(a->length== b->length) {
+        // compare bytes given a length
+        return memcmp(a->bytes, b->bytes, a->length) == 0;
+    }
+
     return false;
 }
