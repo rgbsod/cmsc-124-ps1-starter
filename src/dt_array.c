@@ -21,10 +21,30 @@
 #include <stdlib.h>
 
 struct dt_array {
-    dt_value *elements;
+    dt_value *elements  ;
     size_t    length;
     long long lower_bound;
 };
+
+// ------------- HELPERS ----------------
+static bool dt_array_check_index(const dt_array *a, long long index, size_t *offset_out)
+{
+    long long first = dt_array_lower_bound(a);
+
+    if (index < first) {
+        return false;
+    }
+
+    size_t distance = (size_t)(index) - (size_t)(first);
+
+    if (distance >= a->length) {
+        return false;
+    }
+
+    *offset_out = distance;
+    return true;
+}
+
 
 /*
  * dt_array_new builds an array of length nil elements.
@@ -34,31 +54,70 @@ struct dt_array {
 dt_array *dt_array_new(size_t length, long long lower_bound)
 {
     /* TODO: Allocate the descriptor and length elements.
-       Set each element to dt_value_nil(). Store the lower bound.
+       Reject a nonempty range with an unrepresentable final index. [DONE]
+       Reject an element block size that exceeds SIZE_MAX. [DONE]
+       Set each element to dt_value_nil(). Store the lower bound. [DONE]
        Return a valid array for a zero length.
-       Reject a nonempty range with an unrepresentable final index.
-       Reject an element block size that exceeds SIZE_MAX.
        dt_array_new(3, 0)   -> three nil elements, indices 0, 1, 2
        dt_array_new(3, -1)  -> three nil elements, indices -1, 0, 1
        dt_array_new(0, 0)   -> an empty array
        cases/normal/array_basics.case, cases/boundary/array_empty.case,
        cases/boundary/array_negative_lower_bound.case */
-    (void)length;
-    (void)lower_bound;
-    return NULL;
-}
+    
+    //check if capacity limit is legal
+    if (length > 0 && lower_bound > LLONG_MAX - (long long)(length - 1)){
+        return NULL;
+    }
 
+    //check if byte size is representable
+    if (length > SIZE_MAX/sizeof(dt_value)){
+        return NULL;
+    }
+
+    //allocate descriptor
+    dt_array *a = malloc(sizeof(dt_array));
+    if (a == NULL){
+        return NULL;
+    }
+
+    //allocate length:
+    if (length > 0){
+        a->elements = malloc(length*sizeof(dt_value));
+        if (a->elements == NULL){
+            free(a);    //to not leak it
+            return NULL;
+        }
+    }
+
+    if (length == 0){
+        a->elements = NULL;
+    }
+
+    for(size_t i=0; i<length;i++){
+        a->elements[i] = dt_value_nil();
+    }
+
+    a->length = length;
+    a->lower_bound = lower_bound;
+    return a;
+}
 /*
  * dt_array_free releases the element block and descriptor. It accepts NULL.
  * The environment owns the runtime objects referenced by the dt_value elements.
  */
 void dt_array_free(dt_array *a)
 {
-    /* TODO: Release the elements. Then release the descriptor.
-       Preserve the referenced values. The driver environment owns them.
+    /* TODO: Release the elements. Then release the descriptor. [DONE]
+       Preserve the referenced values. The driver environment owns them. [ DONE]
        an array holding a string  -> the element block goes, the string stays
        dt_array_free(NULL)        -> returns, having done nothing */
-    (void)a;
+    if (a == NULL){
+        return;
+    }
+
+    free(a->elements);
+    free(a);
+
 }
 
 /*
@@ -71,8 +130,7 @@ size_t dt_array_len(const dt_array *a)
        after `arr new a 3 -1`:  dt_array_len(a) -> 3, the same three elements
        after `arr new a 0 0`:   dt_array_len(a) -> 0
        cases/normal/array_basics.case, cases/boundary/array_empty.case */
-    (void)a;
-    return 0;
+    return a->length;
 }
 
 /*
@@ -87,8 +145,7 @@ long long dt_array_lower_bound(const dt_array *a)
        after `arr new a 3 1`:   dt_array_lower_bound(a) -> 1
        cases/boundary/array_negative_lower_bound.case,
        cases/boundary/array_lower_bound_one.case */
-    (void)a;
-    return 0;
+    return a->lower_bound;
 }
 
 /*
@@ -109,10 +166,16 @@ dt_status dt_array_get(const dt_array *a, long long index, dt_value *out)
        cases/boundary/array_index_above_upper.case,
        cases/boundary/array_index_below_lower.case,
        cases/boundary/array_full_range_index.case */
-    (void)a;
-    (void)index;
-    (void)out;
-    return DT_ERR_RANGE;
+    
+    size_t offset;
+    if (!dt_array_check_index(a, index, &offset)){
+        return DT_ERR_RANGE;
+    }
+
+    *out = a->elements[offset];
+    return DT_OK;
+
+    
 }
 
 /*
@@ -128,8 +191,14 @@ dt_status dt_array_set(dt_array *a, long long index, dt_value v)
          dt_array_set(a, -1, dt_value_int(10))  -> DT_OK, offset 0 holds 10
          dt_array_set(a,  2, dt_value_int(10))  -> DT_ERR_RANGE, nothing changes
        cases/normal/array_basics.case, cases/boundary/array_negative_lower_bound.case */
-    (void)a;
-    (void)index;
-    (void)v;
-    return DT_ERR_RANGE;
+
+    size_t offset;
+    if (!dt_array_check_index(a, index, &offset)){
+        return DT_ERR_RANGE;
+    }
+
+    a->elements[offset] = v;
+    return DT_OK;
+
 }
+
