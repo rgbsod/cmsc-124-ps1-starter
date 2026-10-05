@@ -44,7 +44,7 @@ dt_str *dt_str_new(const char *bytes, size_t length)
     }
 
     // allocate handle
-    dt_str *s = malloc(sizeof(dt_str));
+    dt_str *s = malloc(sizeof(*s));
     if (s == NULL) {
         return NULL;
     }
@@ -62,8 +62,8 @@ dt_str *dt_str_new(const char *bytes, size_t length)
     }
 
     s->bytes[length] = '\0'; // terminator at the end
-    s->length = length;
-    s->capacity = length + 1;    
+    s->length = length; 
+    s->capacity = length + 1; // length + terminator  
 
     return s;
 }
@@ -161,6 +161,7 @@ dt_status dt_str_append(dt_str *s, const char *bytes, size_t length)
         // reallocate
         char *new_str = realloc(s->bytes, new_capacity);
 
+        // allocation failure
         if (new_str == NULL) {
             return DT_ERR_CAPACITY;
         }
@@ -169,6 +170,7 @@ dt_status dt_str_append(dt_str *s, const char *bytes, size_t length)
         s->capacity = new_capacity;
     }
 
+    // copy starting at the end of the prev str
     if (length > 0) {
         memcpy(s->bytes + s->length, bytes, length);
     }
