@@ -27,7 +27,7 @@ struct dt_array {
 };
 
 // ------------- HELPERS ----------------
-static bool dt_array_check_index(const dt_array *a, long long index, size_t *offset_out)
+bool dt_array_check_index(const dt_array *a, long long index, size_t *offset_out)
 {
     long long first = dt_array_lower_bound(a);
 
