@@ -93,9 +93,11 @@ dt_status dt_int_mul(long long a, long long b, long long *out)
     //handle -1 with LLONG_MIN
 
     if (b == -1){
-    if (a == LLONG_MIN){
+        if (a == LLONG_MIN){
         return DT_ERR_OVERFLOW;
     }
+        *out = -a;
+        return DT_OK;
     }
 
     if (a == -1){
