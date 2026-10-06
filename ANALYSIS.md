@@ -9,7 +9,7 @@
 
 
 ## Item 2
-The C version allows you to be in full control of the rules you want to implement for each value that you deal with, which is limited when the compiler automatically checks. Basically, it makes you deal with what you want to deal with. It can be a double-edged sword, although this freedom can make you explore and allows flexibility in the program, dealing with the edge cases should be extra careful as it might crash due to unhandled invalid inputs. 
+The C version allows you to be in full control of the rules you want to implement for each value that you deal with, which is limited when the compiler automatically checks. Basically, it makes you deal with what you want to deal with. It can be a double-edged sword, although this freedom can make you explore and allows flexibility in the program, dealing with the edge cases should be extra careful as it might crash due to unhandled invalid inputs. For instance, C reads a `dt_value` based on rules we implemented, and  compiles it without any flags or error. However, in other languages that is compiler-enforced like Rust, it refuses to compile the program. It allows safety net for cases you fail to notice before compiling. For most programmers, they choose what offers them automatic safety as it prevents bugs that could appear on the later time as they make the program. The cost for this is the speed and control of the system that the C version offers. The worth of wanting is based on what cost matters most for your program.
 
 
 ## Item 3 
@@ -18,4 +18,4 @@ Arguably, in most situations where maps are implemented, this wouldn't matter at
 
 
 ## Item 4 
-Accessing an allocation after its release can produce incorrect data due to incorrect access. The address still points at the memory, but it may be given to a different allocation that is different from the old one that it used to hold. Hence, when accessed, the address could contain a different data. Allocation that remains unreleased can keep adding up to the memory when ignored, which in long time can make the memory access slower and may crash.
+Accessing an allocation after its release can produce incorrect data due to incorrect access. The address still points at the memory, but it may be given to a different allocation that is different from the old one that it used to hold. Hence, when accessed, the address could contain a different data. For both in long-running server and command-line tool, it can make data corrupted and the system to crash. Allocation that remains unreleased can keep adding up to the memory when ignored in a long time. On one hand, if this case is dismissed in a long-running server, it can full out the memory, which can cause the program to slow down, and fail when runs out. In a command-line tool, the unreleased allocation barely affect it as it takes back the memory when the program exits. 
