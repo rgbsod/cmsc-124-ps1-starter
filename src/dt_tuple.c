@@ -34,23 +34,29 @@ dt_tuple *dt_tuple_new(const dt_value *values, size_t count)
        cases/normal/tuple_basics.case, cases/capacity/tuple_max_arity.case,
        cases/capacity/tuple_over_arity.case */
     
+    // tuple count exceeds max arity
     if (count > DT_TUPLE_MAX_ARITY) {
         return NULL;
     }
 
+    // allocation
     dt_tuple *t = malloc(sizeof(*t));
 
+    // allocation failure
     if (t == NULL) {
         return NULL;
     }
 
+    // initialize arity
     t->arity = 0;
 
+    // copy values
     for (size_t index = 0; index < count; index++) {
         t->values[index] = values[index];
         t->arity++;
     } 
 
+    // returns tuple with values and its arity
     return t;
     
 }
@@ -70,6 +76,7 @@ void dt_tuple_free(dt_tuple *t)
         return;
     }
 
+    // frees tuple
     free(t);
 }
 
@@ -103,6 +110,7 @@ dt_status dt_tuple_at(const dt_tuple *t, size_t index, dt_value *out)
         return DT_ERR_RANGE;
     }
 
+    // out is value at certain index
     *out = t->values[index];
 
     return DT_OK;
